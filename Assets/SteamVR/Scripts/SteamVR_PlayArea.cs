@@ -18,6 +18,8 @@ public class SteamVR_PlayArea : MonoBehaviour
 	public bool drawInGame = true;
     public bool drawOffsetedRoom = false;
 
+    public HmdQuad_t m_Rect = new HmdQuad_t();
+
     public enum Size
 	{
 		Calibrated,
@@ -32,69 +34,91 @@ public class SteamVR_PlayArea : MonoBehaviour
 	[HideInInspector]
 	public Vector3[] vertices;
 
-	public static bool GetBounds( Size size, ref HmdQuad_t pRect )
-	{
-		if (size == Size.Calibrated)
-		{
-			var initOpenVR = (!SteamVR.active && !SteamVR.usingNativeSupport);
-			if (initOpenVR)
-			{
-				var error = EVRInitError.None;
-				OpenVR.Init(ref error, EVRApplicationType.VRApplication_Other);
-			}
+    public void SetRect(float x, float z)
+    {
+        float halfx = x * 0.5f;
+        float halfz = z * 0.5f;
 
-			var chaperone = OpenVR.Chaperone;
-			bool success = (chaperone != null) && chaperone.GetPlayAreaRect(ref pRect);
-			if (!success)
-				Debug.LogWarning("Failed to get Calibrated Play Area bounds!  Make sure you have tracking first, and that your space is calibrated.");
+        m_Rect.vCorners0.v0 = x;
+        m_Rect.vCorners0.v1 = 0;
+        m_Rect.vCorners0.v2 = z;
+        
+        m_Rect.vCorners1.v0 = x;
+        m_Rect.vCorners1.v1 = 0;
+        m_Rect.vCorners1.v2 = -z;
+        
+        m_Rect.vCorners2.v0 = -x;
+        m_Rect.vCorners2.v1 = 0;
+        m_Rect.vCorners2.v2 = -z;
+        
+        m_Rect.vCorners3.v0 = -x;
+        m_Rect.vCorners3.v1 = 0;
+        m_Rect.vCorners3.v2 = z;
+    }
 
-			if (initOpenVR)
-				OpenVR.Shutdown();
+	//public static bool GetBounds( Size size, ref HmdQuad_t pRect )
+	//{
+	//	if (size == Size.Calibrated)
+	//	{
+	//		var initOpenVR = (!SteamVR.active && !SteamVR.usingNativeSupport);
+	//		if (initOpenVR)
+	//		{
+	//			var error = EVRInitError.None;
+	//			OpenVR.Init(ref error, EVRApplicationType.VRApplication_Other);
+	//		}
 
-			return success;
-		}
-		else
-		{
-			try
-			{
-				var str = size.ToString().Substring(1);
-				var arr = str.Split(new char[] {'x'}, 2);
+	//		var chaperone = OpenVR.Chaperone;
+	//		bool success = (chaperone != null) && chaperone.GetPlayAreaRect(ref pRect);
+	//		if (!success)
+	//			Debug.LogWarning("Failed to get Calibrated Play Area bounds!  Make sure you have tracking first, and that your space is calibrated.");
 
-				// convert to half size in meters (from cm)
-				var x = float.Parse(arr[0]) / 200;
-				var z = float.Parse(arr[1]) / 200;
+	//		if (initOpenVR)
+	//			OpenVR.Shutdown();
 
-				pRect.vCorners0.v0 =  x;
-				pRect.vCorners0.v1 =  0;
-				pRect.vCorners0.v2 =  z;
+	//		return success;
+	//	}
+	//	else
+	//	{
+	//		try
+	//		{
+	//			var str = size.ToString().Substring(1);
+	//			var arr = str.Split(new char[] {'x'}, 2);
 
-				pRect.vCorners1.v0 =  x;
-				pRect.vCorners1.v1 =  0;
-				pRect.vCorners1.v2 = -z;
+	//			// convert to half size in meters (from cm)
+	//			var x = float.Parse(arr[0]) / 200;
+	//			var z = float.Parse(arr[1]) / 200;
 
-				pRect.vCorners2.v0 = -x;
-				pRect.vCorners2.v1 =  0;
-				pRect.vCorners2.v2 = -z;
+	//			pRect.vCorners0.v0 =  x;
+	//			pRect.vCorners0.v1 =  0;
+	//			pRect.vCorners0.v2 =  z;
 
-				pRect.vCorners3.v0 = -x;
-				pRect.vCorners3.v1 =  0;
-				pRect.vCorners3.v2 =  z;
+	//			pRect.vCorners1.v0 =  x;
+	//			pRect.vCorners1.v1 =  0;
+	//			pRect.vCorners1.v2 = -z;
 
-				return true;
-			}
-			catch {}
-		}
+	//			pRect.vCorners2.v0 = -x;
+	//			pRect.vCorners2.v1 =  0;
+	//			pRect.vCorners2.v2 = -z;
 
-		return false;
-	}
+	//			pRect.vCorners3.v0 = -x;
+	//			pRect.vCorners3.v1 =  0;
+	//			pRect.vCorners3.v2 =  z;
+
+	//			return true;
+	//		}
+	//		catch {}
+	//	}
+
+	//	return false;
+	//}
 
 	public void BuildMesh()
 	{
-		var rect = new HmdQuad_t();
-		if ( !GetBounds( size, ref rect ) )
-			return;
+        //var rect = new HmdQuad_t();
+        //if (!GetBounds(size, ref rect))
+        //    return;
 
-		var corners = new HmdVector3_t[] { rect.vCorners0, rect.vCorners1, rect.vCorners2, rect.vCorners3 };
+        var corners = new HmdVector3_t[] { m_Rect.vCorners0, m_Rect.vCorners1, m_Rect.vCorners2, m_Rect.vCorners3 };
 
 		vertices = new Vector3[corners.Length * 2];
 		for (int i = 0; i < corners.Length; i++)
@@ -254,27 +278,29 @@ public class SteamVR_PlayArea : MonoBehaviour
 			// No need to remain enabled at runtime.
 			// Anyone that wants to change properties at runtime
 			// should call BuildMesh themselves.
-			enabled = false;
+			//enabled = false;
 
 			// If we want the configured bounds of the user,
 			// we need to wait for tracking.
-			if (drawInGame && size == Size.Calibrated)
-				StartCoroutine("UpdateBounds");
+			//if (drawInGame && size == Size.Calibrated)
+			//	StartCoroutine("UpdateBounds");
 		}
 	}
 
-	IEnumerator UpdateBounds()
+	public IEnumerator UpdateBounds()
 	{
 		GetComponent<MeshFilter>().mesh = null; // clear existing
 
-		var chaperone = OpenVR.Chaperone;
-		if (chaperone == null)
-			yield break;
+		//var chaperone = OpenVR.Chaperone;
+		//if (chaperone == null)
+		//	yield break;
 
-		while (chaperone.GetCalibrationState() != ChaperoneCalibrationState.OK)
-			yield return null;
+		//while (chaperone.GetCalibrationState() != ChaperoneCalibrationState.OK)
+		//	yield return null;
 
 		BuildMesh();
-	}
+
+        yield return null;
+    }
 }
 

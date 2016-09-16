@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Collections;
 using System.Collections.Generic;
+using Valve.VR;
 
 public class UTcpClient : MonoBehaviour {
 
@@ -27,14 +28,17 @@ public class UTcpClient : MonoBehaviour {
     private float m_RefreshTime = 1.0f;
     private float m_LastUpdate = 0.0f;
 
-    private TcpClient m_client = new TcpClient();
-    private NetworkStream m_stream;
-    private IPEndPoint m_ipEndPoint;
+    //private TcpClient m_client = new TcpClient();
+    //private NetworkStream m_stream;
+    //private IPEndPoint m_ipEndPoint;
 
     private Queue<string> commandList = new Queue<string>();
     private System.Object locker = new System.Object();
 
     private bool m_ConnectionOn = false;
+    private bool m_ReleaseCommand = true;
+
+    public SteamVR_PlayArea m_BaseArea;
 
     void Awake() {
         m_Flag1.transform.localPosition = m_Flag2.transform.localPosition = m_Flag3.transform.localPosition = new Vector3(-10, 0, -10);
@@ -52,13 +56,19 @@ public class UTcpClient : MonoBehaviour {
 
         if (m_ConnectionOn)
         {
-            if (Time.time - m_LastUpdate > m_RefreshTime)
+            if (Time.time - m_LastUpdate > m_RefreshTime && m_ReleaseCommand)
             {
                 m_LastUpdate = Time.time;
                 if (commandList.Count != 0)
                 {
-                    string nextCommand = commandList.Dequeue();
+                    string nextCommand = String.Empty;
+                    //locking queue for concurrence
+                    lock (locker)
+                    {
+                        nextCommand = commandList.Dequeue();
+                    }
                     SendCommand(nextCommand);
+                   
                 }
                 else
                 {
@@ -71,47 +81,56 @@ public class UTcpClient : MonoBehaviour {
 
     private void SendCommand(string command)
     {
-        lock (locker)
+        NetworkStream _stream = null;
+        TcpClient client = new TcpClient();
+        try
         {
-            try
-            {
-                //This is a blocking method
-                m_client.Connect(m_ipEndPoint);
+            m_ReleaseCommand = false;
+            //This is a blocking method
+            IPEndPoint ipEndPoint = new IPEndPoint(IPAddress.Parse(m_IpAddress), m_Port);
+            
+            client.Connect(ipEndPoint);
 
-                Byte[] data = System.Text.Encoding.ASCII.GetBytes(command);
+            Byte[] data = System.Text.Encoding.ASCII.GetBytes(command);
 
-                m_stream = m_client.GetStream();
-                m_stream.Write(data, 0, data.Length);
+            _stream = client.GetStream();
+            _stream.Write(data, 0, data.Length);
 
-                data = new Byte[256];
+            data = new Byte[256];
 
-                String response = String.Empty;
+            String response = String.Empty;
 
-                Int32 bytes = m_stream.Read(data, 0, data.Length);
-                response = System.Text.Encoding.ASCII.GetString(data, 0, bytes);
+            Int32 bytes = _stream.Read(data, 0, data.Length);
+            response = System.Text.Encoding.ASCII.GetString(data, 0, bytes);
 
-                ParseMessage(response);
+            ParseMessage(response);
 
-                m_stream.Flush();
-            }
-            catch (SocketException se)
-            {
-                PathIntegrationTaskClient.Logger.Log(string.Format("SocketException: {0}", se.Message), PathIntegrationTaskClient.LoggerMessageType.Error);
-                m_ConnectionOn = false;
-            }
-            catch (Exception ex)
-            {
-                PathIntegrationTaskClient.Logger.Log(string.Format("Generic Exception: {0}", ex.Message), PathIntegrationTaskClient.LoggerMessageType.Error);
-                m_ConnectionOn = false;
-            }
-            finally
-            {
-                if (m_stream != null)
-                    m_stream.Close();
-                if (m_client != null)
-                    m_client.Close();
-            }
-        }        
+            _stream.Flush();
+        }
+        catch (SocketException se)
+        {
+            PathIntegrationTaskClient.Logger.Log(string.Format("SocketException: {0}", se.Message), PathIntegrationTaskClient.LoggerMessageType.Error);
+            m_ConnectionOn = false;
+            if (client != null)
+                client.Close();
+        }
+        catch (Exception ex)
+        {
+            PathIntegrationTaskClient.Logger.Log(string.Format("Generic Exception: {0}", ex.Message), PathIntegrationTaskClient.LoggerMessageType.Error);
+            m_ConnectionOn = false;
+            if (client != null)
+                client.Close();
+        }
+        finally
+        {
+            if (_stream != null)
+                _stream.Close();
+            if (client != null)
+                client.Close();
+
+            m_ReleaseCommand = true;
+        }
+    
     }
 
     private void ParseMessage(string message)
@@ -124,7 +143,7 @@ public class UTcpClient : MonoBehaviour {
         if (h_end > 0)
         {
             header = message.Substring(0, h_end);
-            content = message.Substring(h_end, message.Length - h_end);
+            content = message.Substring(h_end + 1, message.Length - h_end - 1);
         }
 
         HandleMessage(header, content);
@@ -134,6 +153,62 @@ public class UTcpClient : MonoBehaviour {
 
     private void HandleMessage(string message, string content)
     {
+        switch (message)
+        {
+            case "INIT":
+                if (content == "ACK")
+                {
+                    m_LastUpdate = Time.time;
+                    //Adding get room command to the chain
+                    AddCommandQueue("GET_ROOM:");
+                    m_ConnectionOn = true;
+                }
+                break;
+            case "START_PRACT":
+                if (content == "ACK")
+                {
+                    m_LastUpdate = Time.time;
+                    m_ConnectionOn = true;
+                }
+                break;
+            case "START_TRIAL":
+                if (content == "ACK")
+                {
+                    m_LastUpdate = Time.time;
+                    m_ConnectionOn = true;
+                }
+                break;
+            case "GET_ROOM":
+                //getting coordinates of the room
+                GetRoomCoordinates(content);
+                break;
+            case "GET_UPDATE":
+                //this needs to look to different things
+                break;
+            default:
+                //error
+                break;
+        }
+    }
+
+    public void AddCommandQueue(string command)
+    {
+        lock (locker)
+        {
+            commandList.Enqueue(command);
+        }
+    }
+
+    private void GetRoomCoordinates(string content)
+    {
+        string[] coordinates = content.Split(';');
+
+        float x = float.Parse(coordinates[0]);
+        float y = float.Parse(coordinates[1]);
+        float z = float.Parse(coordinates[2]);
+
+        m_BaseArea.SetRect(x, y);
+        StartCoroutine(m_BaseArea.UpdateBounds());
 
     }
 
@@ -143,20 +218,21 @@ public class UTcpClient : MonoBehaviour {
     {
 
         PathIntegrationTaskClient.Logger.Log("Attempting to start connection...", PathIntegrationTaskClient.LoggerMessageType.Info);
-        m_ipEndPoint = new IPEndPoint(IPAddress.Parse(m_IpAddress), m_Port);
+        //m_ipEndPoint = new IPEndPoint(IPAddress.Parse(m_IpAddress), m_Port);
         SendCommand("INIT:");
         
     }
 
     public void StartTrial()
     {
-
+        AddCommandQueue("START_TRIAL:");
     }
 
     public void StartPractise()
     {
-
+        AddCommandQueue("START_PRACT:");
     }
+
     #endregion
 
 }

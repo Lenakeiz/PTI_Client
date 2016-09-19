@@ -39,21 +39,21 @@ public class SteamVR_PlayArea : MonoBehaviour
         float halfx = x * 0.5f;
         float halfz = z * 0.5f;
 
-        m_Rect.vCorners0.v0 = x;
+        m_Rect.vCorners0.v0 = halfx;
         m_Rect.vCorners0.v1 = 0;
-        m_Rect.vCorners0.v2 = z;
+        m_Rect.vCorners0.v2 = halfz;
         
-        m_Rect.vCorners1.v0 = x;
+        m_Rect.vCorners1.v0 = halfx;
         m_Rect.vCorners1.v1 = 0;
-        m_Rect.vCorners1.v2 = -z;
+        m_Rect.vCorners1.v2 = -halfz;
         
-        m_Rect.vCorners2.v0 = -x;
+        m_Rect.vCorners2.v0 = -halfx;
         m_Rect.vCorners2.v1 = 0;
-        m_Rect.vCorners2.v2 = -z;
+        m_Rect.vCorners2.v2 = -halfz;
         
-        m_Rect.vCorners3.v0 = -x;
+        m_Rect.vCorners3.v0 = -halfx;
         m_Rect.vCorners3.v1 = 0;
-        m_Rect.vCorners3.v2 = z;
+        m_Rect.vCorners3.v2 = halfz;
     }
 
 	//public static bool GetBounds( Size size, ref HmdQuad_t pRect )

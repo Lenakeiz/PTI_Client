@@ -38,12 +38,15 @@ public class UTcpClient : MonoBehaviour {
     private bool m_ConnectionOn = false;
     private bool m_ReleaseCommand = true;
 
-    public SteamVR_PlayArea m_BaseArea;
+    public SteamVR_PlayArea m_TrackedArea;
+    public SteamVR_PlayArea m_OffsetedArea;
 
     void Awake() {
         m_Flag1.transform.localPosition = m_Flag2.transform.localPosition = m_Flag3.transform.localPosition = new Vector3(-10, 0, -10);
         PathIntegrationTaskClient.Logger.SetLoggerUIFrame(m_LoggerText);
         PathIntegrationTaskClient.Logger.SetLoggerLogToExternal(false);
+        m_TrackedArea = GameObject.FindGameObjectWithTag("TrackedArea").GetComponent<SteamVR_PlayArea>();
+        m_OffsetedArea = GameObject.FindGameObjectWithTag("OffsetArea").GetComponent<SteamVR_PlayArea>();
     }
 
     // Use this for initialization
@@ -103,6 +106,8 @@ public class UTcpClient : MonoBehaviour {
             Int32 bytes = _stream.Read(data, 0, data.Length);
             response = System.Text.Encoding.ASCII.GetString(data, 0, bytes);
 
+            //PathIntegrationTaskClient.Logger.Log(string.Format("Received: {0}", response), PathIntegrationTaskClient.LoggerMessageType.Info);
+
             ParseMessage(response);
 
             _stream.Flush();
@@ -147,8 +152,7 @@ public class UTcpClient : MonoBehaviour {
         }
 
         HandleMessage(header, content);
-
-        PathIntegrationTaskClient.Logger.Log(string.Format("Received: {0}", message), PathIntegrationTaskClient.LoggerMessageType.Info);
+                
     }
 
     private void HandleMessage(string message, string content)
@@ -182,8 +186,11 @@ public class UTcpClient : MonoBehaviour {
                 //getting coordinates of the room
                 GetRoomCoordinates(content);
                 break;
-            case "GET_UPDATE":
-                //this needs to look to different things
+            case "UPD_PLAYER":
+                SetPlayerCoordinates(content);
+                break;
+            case "UPD_FLAGS":
+                SetFlagCoordinates(content);
                 break;
             default:
                 //error
@@ -207,8 +214,44 @@ public class UTcpClient : MonoBehaviour {
         float y = float.Parse(coordinates[1]);
         float z = float.Parse(coordinates[2]);
 
-        m_BaseArea.SetRect(x, y);
-        StartCoroutine(m_BaseArea.UpdateBounds());
+        //Updating bounds
+        m_TrackedArea.SetRect(x, y);
+        StartCoroutine(m_TrackedArea.UpdateBounds());
+        m_OffsetedArea.SetRect(x + z, y + z);
+        StartCoroutine(m_OffsetedArea.UpdateBounds());
+
+    }
+
+    private void SetPlayerCoordinates(string content)
+    {
+        string[] coordinates = content.Split(';');
+
+        float x = float.Parse(coordinates[0]);
+        float y = float.Parse(coordinates[1]);
+        float z = float.Parse(coordinates[2]);
+        float or_x = float.Parse(coordinates[3]);
+        float or_y = float.Parse(coordinates[4]);
+        float or_z = float.Parse(coordinates[5]);
+
+        m_Player.transform.localPosition = new Vector3(x, y, z);
+        m_Player.transform.rotation = Quaternion.Euler(or_x, or_y, or_z);
+
+    }
+
+    private void SetFlagCoordinates(string content)
+    {
+        string[] coordinates = content.Split(';');
+
+        float x1 = float.Parse(coordinates[0]);
+        float z1 = float.Parse(coordinates[1]);
+        float x2 = float.Parse(coordinates[2]);
+        float z2 = float.Parse(coordinates[3]);
+        float x3 = float.Parse(coordinates[4]);
+        float z3 = float.Parse(coordinates[5]);
+
+        m_Flag1.transform.localPosition = new Vector3(x1, -1.0f, z1);
+        m_Flag2.transform.localPosition = new Vector3(x2, -1.0f, z2);
+        m_Flag3.transform.localPosition = new Vector3(x3, -1.0f, z3);
 
     }
 

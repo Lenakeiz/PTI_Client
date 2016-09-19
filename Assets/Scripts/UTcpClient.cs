@@ -70,8 +70,7 @@ public class UTcpClient : MonoBehaviour {
                     {
                         nextCommand = commandList.Dequeue();
                     }
-                    SendCommand(nextCommand);
-                   
+                    SendCommand(nextCommand);                   
                 }
                 else
                 {
@@ -86,6 +85,8 @@ public class UTcpClient : MonoBehaviour {
     {
         NetworkStream _stream = null;
         TcpClient client = new TcpClient();
+        String response = String.Empty;
+
         try
         {
             m_ReleaseCommand = false;
@@ -99,15 +100,11 @@ public class UTcpClient : MonoBehaviour {
             _stream = client.GetStream();
             _stream.Write(data, 0, data.Length);
 
-            data = new Byte[256];
-
-            String response = String.Empty;
+            data = new Byte[256];            
 
             Int32 bytes = _stream.Read(data, 0, data.Length);
             response = System.Text.Encoding.ASCII.GetString(data, 0, bytes);
-
-            //PathIntegrationTaskClient.Logger.Log(string.Format("Received: {0}", response), PathIntegrationTaskClient.LoggerMessageType.Info);
-
+            
             ParseMessage(response);
 
             _stream.Flush();
@@ -135,7 +132,9 @@ public class UTcpClient : MonoBehaviour {
 
             m_ReleaseCommand = true;
         }
-    
+
+        PathIntegrationTaskClient.Logger.Log(string.Format("Received: {0}", response), PathIntegrationTaskClient.LoggerMessageType.Info);
+
     }
 
     private void ParseMessage(string message)

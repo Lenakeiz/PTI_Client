@@ -216,7 +216,7 @@ public class UTcpClient : MonoBehaviour {
         //Updating bounds
         m_TrackedArea.SetRect(x, y);
         StartCoroutine(m_TrackedArea.UpdateBounds());
-        m_OffsetedArea.SetRect(x + z, y + z);
+        m_OffsetedArea.SetRect(x + 2 * z, y + 2 * z);
         StartCoroutine(m_OffsetedArea.UpdateBounds());
 
     }

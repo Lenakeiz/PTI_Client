@@ -28,6 +28,14 @@ public class UTcpClient : MonoBehaviour {
     private float m_RefreshTime = 1.0f;
     private float m_LastUpdate = 0.0f;
 
+    private IPAddress m_RegisteredIpAddress = null;
+    private int m_RegisteredPort;
+
+    [SerializeField]
+    private Text m_InputIPText;
+    [SerializeField]
+    private Text m_InputPortText;
+
     //private TcpClient m_client = new TcpClient();
     //private NetworkStream m_stream;
     //private IPEndPoint m_ipEndPoint;
@@ -259,8 +267,26 @@ public class UTcpClient : MonoBehaviour {
     public void StartConnection()
     {
 
-        PathIntegrationTaskClient.Logger.Log("Attempting to start connection...", PathIntegrationTaskClient.LoggerMessageType.Info);
+        
         //m_ipEndPoint = new IPEndPoint(IPAddress.Parse(m_IpAddress), m_Port);
+
+        if(!IPAddress.TryParse(m_InputIPText.text, out m_RegisteredIpAddress))
+        {
+            PathIntegrationTaskClient.Logger.Log("Ip address is not valid...", PathIntegrationTaskClient.LoggerMessageType.Warning);
+            return;
+        }
+
+        if (!Int32.TryParse(m_InputPortText.text, out m_RegisteredPort))
+        {
+
+        }
+        else if ((1024 > m_RegisteredPort || m_RegisteredPort > 65536))
+        {
+            PathIntegrationTaskClient.Logger.Log("Valid port range: 1024 to 65536...", PathIntegrationTaskClient.LoggerMessageType.Warning);
+            return;
+        }
+
+        PathIntegrationTaskClient.Logger.Log("Attempting to start connection...", PathIntegrationTaskClient.LoggerMessageType.Info);
         SendCommand("INIT:");
         
     }

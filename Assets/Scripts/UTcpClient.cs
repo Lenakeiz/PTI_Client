@@ -99,7 +99,7 @@ public class UTcpClient : MonoBehaviour {
         {
             m_ReleaseCommand = false;
             //This is a blocking method
-            IPEndPoint ipEndPoint = new IPEndPoint(IPAddress.Parse(m_IpAddress), m_Port);
+            IPEndPoint ipEndPoint = new IPEndPoint(m_RegisteredIpAddress, m_RegisteredPort);
             
             client.Connect(ipEndPoint);
 
@@ -267,27 +267,34 @@ public class UTcpClient : MonoBehaviour {
     public void StartConnection()
     {
 
-        
+
         //m_ipEndPoint = new IPEndPoint(IPAddress.Parse(m_IpAddress), m_Port);
-
-        if(!IPAddress.TryParse(m_InputIPText.text, out m_RegisteredIpAddress))
+        try
         {
-            PathIntegrationTaskClient.Logger.Log("Ip address is not valid...", PathIntegrationTaskClient.LoggerMessageType.Warning);
-            return;
-        }
+            if (!IPAddress.TryParse(m_InputIPText.text, out m_RegisteredIpAddress))
+            {
+                PathIntegrationTaskClient.Logger.Log("Ip address is not valid...", PathIntegrationTaskClient.LoggerMessageType.Warning);
+                return;
+            }
 
-        if (!Int32.TryParse(m_InputPortText.text, out m_RegisteredPort))
+            if (!Int32.TryParse(m_InputPortText.text, out m_RegisteredPort))
+            {
+
+            }
+            else if ((1024 > m_RegisteredPort || m_RegisteredPort > 65536))
+            {
+                PathIntegrationTaskClient.Logger.Log("Valid port range: 1024 to 65536...", PathIntegrationTaskClient.LoggerMessageType.Warning);
+                return;
+            }
+
+            PathIntegrationTaskClient.Logger.Log("Attempting to start connection...", PathIntegrationTaskClient.LoggerMessageType.Info);
+            SendCommand("INIT:");
+        }
+        catch (Exception ex)
         {
-
+            PathIntegrationTaskClient.Logger.Log(ex.Message, PathIntegrationTaskClient.LoggerMessageType.Error);
         }
-        else if ((1024 > m_RegisteredPort || m_RegisteredPort > 65536))
-        {
-            PathIntegrationTaskClient.Logger.Log("Valid port range: 1024 to 65536...", PathIntegrationTaskClient.LoggerMessageType.Warning);
-            return;
-        }
-
-        PathIntegrationTaskClient.Logger.Log("Attempting to start connection...", PathIntegrationTaskClient.LoggerMessageType.Info);
-        SendCommand("INIT:");
+        
         
     }
 

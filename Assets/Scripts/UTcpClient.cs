@@ -116,17 +116,19 @@ public class UTcpClient : MonoBehaviour {
             ParseMessage(response);
 
             _stream.Flush();
+
+            
         }
         catch (SocketException se)
         {
-            PathIntegrationTaskClient.Logger.Log(string.Format("SocketException: {0}", se.Message), PathIntegrationTaskClient.LoggerMessageType.Error);
+            response = se.Message; //PathIntegrationTaskClient.Logger.Log(string.Format("SocketException: {0}", se.Message), PathIntegrationTaskClient.LoggerMessageType.Error);
             m_ConnectionOn = false;
             if (client != null)
                 client.Close();
         }
         catch (Exception ex)
         {
-            PathIntegrationTaskClient.Logger.Log(string.Format("Generic Exception: {0}", ex.Message), PathIntegrationTaskClient.LoggerMessageType.Error);
+            response = ex.Message; //PathIntegrationTaskClient.Logger.Log(string.Format("Generic Exception: {0}", ex.Message), PathIntegrationTaskClient.LoggerMessageType.Error);
             m_ConnectionOn = false;
             if (client != null)
                 client.Close();
@@ -141,7 +143,7 @@ public class UTcpClient : MonoBehaviour {
             m_ReleaseCommand = true;
         }
 
-        PathIntegrationTaskClient.Logger.Log(string.Format("Received: {0}", response), PathIntegrationTaskClient.LoggerMessageType.Info);
+        PathIntegrationTaskClient.Logger.Log(string.Format("Received: {0}", response), PathIntegrationTaskClient.LoggerMessageType.Info);    
 
     }
 
